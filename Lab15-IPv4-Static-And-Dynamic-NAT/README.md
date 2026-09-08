@@ -41,60 +41,42 @@ Because RFC 1918 private IPv4 addresses are non-routable over the public Interne
 * **Access Level:** Global Configuration Mode (`configure terminal`)
   * **Hostname Setup:** `hostname R1`
   * **Internal LAN 1 Interface Setup (G0/0):**
-    ```text
-    interface GigabitEthernet0/0
-     ip address 192.168.10.1 255.255.255.0
-     ip nat inside
-     no shutdown
-    ```
+    * `interface GigabitEthernet0/0`
+    * `ip address 192.168.10.1 255.255.255.0`
+    * `ip nat inside`
+    * `no shutdown`
   * **Internal LAN 2 Interface Setup (G0/2):**
-    ```text
-    interface GigabitEthernet0/2
-     ip address 192.168.20.1 255.255.255.0
-     ip nat inside
-     no shutdown
-    ```
+    * `interface GigabitEthernet0/2`
+    * `ip address 192.168.20.1 255.255.255.0`
+    * `ip nat inside`
+    * `no shutdown`
   * **External WAN Interface Setup (G0/1):**
-    ```text
-    interface GigabitEthernet0/1
-     ip address 200.1.1.254 255.255.255.0
-     ip nat outside
-     no shutdown
-    ```
+    * `interface GigabitEthernet0/1`
+    * `ip address 200.1.1.254 255.255.255.0`
+    * `ip nat outside`
+    * `no shutdown`
   * **Default Gateway Route to ISP:**
-    ```text
-    ip route 0.0.0.0 0.0.0.0 200.1.1.1
-    ```
+    * `ip route 0.0.0.0 0.0.0.0 200.1.1.1`
   * **Static NAT Implementation (1:1 Mapping for Internal Server):**
-    ```text
-    ip nat inside source static 192.168.20.100 200.1.1.100
-    ```
+    * `ip nat inside source static 192.168.20.100 200.1.1.100`
   * **Dynamic NAT Implementation (Pool & ACL Binding for LAN Users):**
-    ```text
-    ip nat pool my_pool 200.1.1.10 200.1.1.20 netmask 255.255.255.0
-    access-list 1 permit 192.168.10.0 0.0.0.255
-    ip nat inside source list 1 pool my_pool
-    ```
+    * `ip nat pool my_pool 200.1.1.10 200.1.1.20 netmask 255.255.255.0`
+    * `access-list 1 permit 192.168.10.0 0.0.0.255`
+    * `ip nat inside source list 1 pool my_pool`
 
 ### 2. Service Provider Router (ISP) Configuration
 * **Access Level:** Global Configuration Mode (`configure terminal`)
   * **Hostname Setup:** `hostname ISP`
   * **External Public Server Interface Setup (G0/0):**
-    ```text
-    interface GigabitEthernet0/0
-     ip address 8.8.8.1 255.0.0.0
-     no shutdown
-    ```
+    * `interface GigabitEthernet0/0`
+    * `ip address 8.8.8.1 255.0.0.0`
+    * `no shutdown`
   * **Perimeter WAN Interface Setup (G0/1):**
-    ```text
-    interface GigabitEthernet0/1
-     ip address 200.1.1.1 255.255.255.0
-     no shutdown
-    ```
+    * `interface GigabitEthernet0/1`
+    * `ip address 200.1.1.1 255.255.255.0`
+    * `no shutdown`
   * **Reverse Static Route for Mapped Public NAT Subnet:**
-    ```text
-    ip route 0.0.0.0 0.0.0.0 200.1.1.254
-    ```
+    * `ip route 0.0.0.0 0.0.0.0 200.1.1.254`
 
 ---
 
@@ -102,5 +84,19 @@ Because RFC 1918 private IPv4 addresses are non-routable over the public Interne
 
 ### 1. Dynamic NAT Outreach Test (Internal PC to Public Server)
 From the Command Prompt of `PC1`, execute:
-```text
-ping 8.8.8.8
+`ping 8.8.8.8`
+
+* **Expected Result:** Successful ICMP echo replies received from `8.8.8.8`. `PC1`'s private source IP (`192.168.10.10`) is dynamically translated to an available public IP address from `my_pool` (`200.1.1.10`).
+
+### 2. Static NAT Inbound Test (Public Server to Internal Server)
+From the Command Prompt of `Server-Internet`, execute:
+`ping 200.1.1.100`
+
+* **Expected Result:** Successful ICMP echo replies received from `200.1.1.100`. `ISP` routes traffic aimed at `200.1.1.100` to `R1`, where `R1` translates the destination address to the internal server's private address (`192.168.20.100`).
+
+### 3. Active NAT Translation Table Inspection
+From Privileged EXEC Mode of `R1`, execute:
+`show ip nat translations`
+
+* **Expected Result:** The translation table displays active bindings mapping **Inside Local** addresses (`192.168.20.100` and `192.168.10.10`) to their respective **Inside Global** public addresses (`200.1.1.100` and `200.1.1.10`).
+*
